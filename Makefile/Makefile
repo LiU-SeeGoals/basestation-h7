@@ -84,8 +84,7 @@ endif
 
 # default action: build all
 all:
-	cd null && $(MAKE)
-	cd null && $(MAKE)
+	cd CM7 && $(MAKE)
 	
 
 

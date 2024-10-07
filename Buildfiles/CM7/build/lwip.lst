@@ -1,0 +1,531 @@
+ARM GAS  /tmp/ccmArG9O.s 			page 1
+
+
+   1              		.cpu cortex-m7
+   2              		.arch armv7e-m
+   3              		.fpu fpv5-d16
+   4              		.eabi_attribute 28, 1
+   5              		.eabi_attribute 20, 1
+   6              		.eabi_attribute 21, 1
+   7              		.eabi_attribute 23, 3
+   8              		.eabi_attribute 24, 1
+   9              		.eabi_attribute 25, 1
+  10              		.eabi_attribute 26, 1
+  11              		.eabi_attribute 30, 1
+  12              		.eabi_attribute 34, 1
+  13              		.eabi_attribute 18, 4
+  14              		.file	"lwip.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.file 1 "../../CM7/LWIP/App/lwip.c"
+  19              		.section	.text.ethernet_link_status_updated,"ax",%progbits
+  20              		.align	1
+  21              		.syntax unified
+  22              		.thumb
+  23              		.thumb_func
+  25              	ethernet_link_status_updated:
+  26              	.LVL0:
+  27              	.LFB173:
+   1:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN Header */
+   2:../../CM7/LWIP/App/lwip.c **** /**
+   3:../../CM7/LWIP/App/lwip.c ****  ******************************************************************************
+   4:../../CM7/LWIP/App/lwip.c ****   * File Name          : LWIP.c
+   5:../../CM7/LWIP/App/lwip.c ****   * Description        : This file provides initialization code for LWIP
+   6:../../CM7/LWIP/App/lwip.c ****   *                      middleWare.
+   7:../../CM7/LWIP/App/lwip.c ****   ******************************************************************************
+   8:../../CM7/LWIP/App/lwip.c ****   * @attention
+   9:../../CM7/LWIP/App/lwip.c ****   *
+  10:../../CM7/LWIP/App/lwip.c ****   * Copyright (c) 2024 STMicroelectronics.
+  11:../../CM7/LWIP/App/lwip.c ****   * All rights reserved.
+  12:../../CM7/LWIP/App/lwip.c ****   *
+  13:../../CM7/LWIP/App/lwip.c ****   * This software is licensed under terms that can be found in the LICENSE file
+  14:../../CM7/LWIP/App/lwip.c ****   * in the root directory of this software component.
+  15:../../CM7/LWIP/App/lwip.c ****   * If no LICENSE file comes with this software, it is provided AS-IS.
+  16:../../CM7/LWIP/App/lwip.c ****   *
+  17:../../CM7/LWIP/App/lwip.c ****   ******************************************************************************
+  18:../../CM7/LWIP/App/lwip.c ****   */
+  19:../../CM7/LWIP/App/lwip.c **** /* USER CODE END Header */
+  20:../../CM7/LWIP/App/lwip.c **** 
+  21:../../CM7/LWIP/App/lwip.c **** /* Includes ------------------------------------------------------------------*/
+  22:../../CM7/LWIP/App/lwip.c **** #include "lwip.h"
+  23:../../CM7/LWIP/App/lwip.c **** #include "lwip/init.h"
+  24:../../CM7/LWIP/App/lwip.c **** #include "lwip/netif.h"
+  25:../../CM7/LWIP/App/lwip.c **** #if defined ( __CC_ARM )  /* MDK ARM Compiler */
+  26:../../CM7/LWIP/App/lwip.c **** #include "lwip/sio.h"
+  27:../../CM7/LWIP/App/lwip.c **** #endif /* MDK ARM Compiler */
+  28:../../CM7/LWIP/App/lwip.c **** #include "ethernetif.h"
+  29:../../CM7/LWIP/App/lwip.c **** 
+  30:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN 0 */
+  31:../../CM7/LWIP/App/lwip.c **** 
+ARM GAS  /tmp/ccmArG9O.s 			page 2
+
+
+  32:../../CM7/LWIP/App/lwip.c **** /* USER CODE END 0 */
+  33:../../CM7/LWIP/App/lwip.c **** /* Private function prototypes -----------------------------------------------*/
+  34:../../CM7/LWIP/App/lwip.c **** static void ethernet_link_status_updated(struct netif *netif);
+  35:../../CM7/LWIP/App/lwip.c **** static void Ethernet_Link_Periodic_Handle(struct netif *netif);
+  36:../../CM7/LWIP/App/lwip.c **** /* ETH Variables initialization ----------------------------------------------*/
+  37:../../CM7/LWIP/App/lwip.c **** void Error_Handler(void);
+  38:../../CM7/LWIP/App/lwip.c **** 
+  39:../../CM7/LWIP/App/lwip.c **** /* DHCP Variables initialization ---------------------------------------------*/
+  40:../../CM7/LWIP/App/lwip.c **** uint32_t DHCPfineTimer = 0;
+  41:../../CM7/LWIP/App/lwip.c **** uint32_t DHCPcoarseTimer = 0;
+  42:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN 1 */
+  43:../../CM7/LWIP/App/lwip.c **** 
+  44:../../CM7/LWIP/App/lwip.c **** /* USER CODE END 1 */
+  45:../../CM7/LWIP/App/lwip.c **** uint32_t EthernetLinkTimer;
+  46:../../CM7/LWIP/App/lwip.c **** 
+  47:../../CM7/LWIP/App/lwip.c **** /* Variables Initialization */
+  48:../../CM7/LWIP/App/lwip.c **** struct netif gnetif;
+  49:../../CM7/LWIP/App/lwip.c **** ip4_addr_t ipaddr;
+  50:../../CM7/LWIP/App/lwip.c **** ip4_addr_t netmask;
+  51:../../CM7/LWIP/App/lwip.c **** ip4_addr_t gw;
+  52:../../CM7/LWIP/App/lwip.c **** 
+  53:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN 2 */
+  54:../../CM7/LWIP/App/lwip.c **** 
+  55:../../CM7/LWIP/App/lwip.c **** /* USER CODE END 2 */
+  56:../../CM7/LWIP/App/lwip.c **** 
+  57:../../CM7/LWIP/App/lwip.c **** /**
+  58:../../CM7/LWIP/App/lwip.c ****   * LwIP initialization function
+  59:../../CM7/LWIP/App/lwip.c ****   */
+  60:../../CM7/LWIP/App/lwip.c **** void MX_LWIP_Init(void)
+  61:../../CM7/LWIP/App/lwip.c **** {
+  62:../../CM7/LWIP/App/lwip.c ****   /* Initialize the LwIP stack without RTOS */
+  63:../../CM7/LWIP/App/lwip.c ****   lwip_init();
+  64:../../CM7/LWIP/App/lwip.c **** 
+  65:../../CM7/LWIP/App/lwip.c ****   /* IP addresses initialization with DHCP (IPv4) */
+  66:../../CM7/LWIP/App/lwip.c ****   ipaddr.addr = 0;
+  67:../../CM7/LWIP/App/lwip.c ****   netmask.addr = 0;
+  68:../../CM7/LWIP/App/lwip.c ****   gw.addr = 0;
+  69:../../CM7/LWIP/App/lwip.c **** 
+  70:../../CM7/LWIP/App/lwip.c ****   /* add the network interface (IPv4/IPv6) without RTOS */
+  71:../../CM7/LWIP/App/lwip.c ****   netif_add(&gnetif, &ipaddr, &netmask, &gw, NULL, &ethernetif_init, &ethernet_input);
+  72:../../CM7/LWIP/App/lwip.c **** 
+  73:../../CM7/LWIP/App/lwip.c ****   /* Registers the default network interface */
+  74:../../CM7/LWIP/App/lwip.c ****   netif_set_default(&gnetif);
+  75:../../CM7/LWIP/App/lwip.c **** 
+  76:../../CM7/LWIP/App/lwip.c ****   /* We must always bring the network interface up connection or not... */
+  77:../../CM7/LWIP/App/lwip.c ****   netif_set_up(&gnetif);
+  78:../../CM7/LWIP/App/lwip.c **** 
+  79:../../CM7/LWIP/App/lwip.c ****   /* Set the link callback function, this function is called on change of link status*/
+  80:../../CM7/LWIP/App/lwip.c ****   netif_set_link_callback(&gnetif, ethernet_link_status_updated);
+  81:../../CM7/LWIP/App/lwip.c **** 
+  82:../../CM7/LWIP/App/lwip.c ****   /* Start DHCP negotiation for a network interface (IPv4) */
+  83:../../CM7/LWIP/App/lwip.c ****   dhcp_start(&gnetif);
+  84:../../CM7/LWIP/App/lwip.c **** 
+  85:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN 3 */
+  86:../../CM7/LWIP/App/lwip.c **** 
+  87:../../CM7/LWIP/App/lwip.c **** /* USER CODE END 3 */
+  88:../../CM7/LWIP/App/lwip.c **** }
+ARM GAS  /tmp/ccmArG9O.s 			page 3
+
+
+  89:../../CM7/LWIP/App/lwip.c **** 
+  90:../../CM7/LWIP/App/lwip.c **** #ifdef USE_OBSOLETE_USER_CODE_SECTION_4
+  91:../../CM7/LWIP/App/lwip.c **** /* Kept to help code migration. (See new 4_1, 4_2... sections) */
+  92:../../CM7/LWIP/App/lwip.c **** /* Avoid to use this user section which will become obsolete. */
+  93:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN 4 */
+  94:../../CM7/LWIP/App/lwip.c **** /* USER CODE END 4 */
+  95:../../CM7/LWIP/App/lwip.c **** #endif
+  96:../../CM7/LWIP/App/lwip.c **** 
+  97:../../CM7/LWIP/App/lwip.c **** /**
+  98:../../CM7/LWIP/App/lwip.c ****   * @brief  Ethernet Link periodic check
+  99:../../CM7/LWIP/App/lwip.c ****   * @param  netif
+ 100:../../CM7/LWIP/App/lwip.c ****   * @retval None
+ 101:../../CM7/LWIP/App/lwip.c ****   */
+ 102:../../CM7/LWIP/App/lwip.c **** static void Ethernet_Link_Periodic_Handle(struct netif *netif)
+ 103:../../CM7/LWIP/App/lwip.c **** {
+ 104:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN 4_4_1 */
+ 105:../../CM7/LWIP/App/lwip.c **** /* USER CODE END 4_4_1 */
+ 106:../../CM7/LWIP/App/lwip.c **** 
+ 107:../../CM7/LWIP/App/lwip.c ****   /* Ethernet Link every 100ms */
+ 108:../../CM7/LWIP/App/lwip.c ****   if (HAL_GetTick() - EthernetLinkTimer >= 100)
+ 109:../../CM7/LWIP/App/lwip.c ****   {
+ 110:../../CM7/LWIP/App/lwip.c ****     EthernetLinkTimer = HAL_GetTick();
+ 111:../../CM7/LWIP/App/lwip.c ****     ethernet_link_check_state(netif);
+ 112:../../CM7/LWIP/App/lwip.c ****   }
+ 113:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN 4_4 */
+ 114:../../CM7/LWIP/App/lwip.c **** /* USER CODE END 4_4 */
+ 115:../../CM7/LWIP/App/lwip.c **** }
+ 116:../../CM7/LWIP/App/lwip.c **** 
+ 117:../../CM7/LWIP/App/lwip.c **** /**
+ 118:../../CM7/LWIP/App/lwip.c ****  * ----------------------------------------------------------------------
+ 119:../../CM7/LWIP/App/lwip.c ****  * Function given to help user to continue LwIP Initialization
+ 120:../../CM7/LWIP/App/lwip.c ****  * Up to user to complete or change this function ...
+ 121:../../CM7/LWIP/App/lwip.c ****  * Up to user to call this function in main.c in while (1) of main(void)
+ 122:../../CM7/LWIP/App/lwip.c ****  *-----------------------------------------------------------------------
+ 123:../../CM7/LWIP/App/lwip.c ****  * Read a received packet from the Ethernet buffers
+ 124:../../CM7/LWIP/App/lwip.c ****  * Send it to the lwIP stack for handling
+ 125:../../CM7/LWIP/App/lwip.c ****  * Handle timeouts if LWIP_TIMERS is set and without RTOS
+ 126:../../CM7/LWIP/App/lwip.c ****  * Handle the llink status if LWIP_NETIF_LINK_CALLBACK is set and without RTOS
+ 127:../../CM7/LWIP/App/lwip.c ****  */
+ 128:../../CM7/LWIP/App/lwip.c **** void MX_LWIP_Process(void)
+ 129:../../CM7/LWIP/App/lwip.c **** {
+ 130:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN 4_1 */
+ 131:../../CM7/LWIP/App/lwip.c **** /* USER CODE END 4_1 */
+ 132:../../CM7/LWIP/App/lwip.c ****   ethernetif_input(&gnetif);
+ 133:../../CM7/LWIP/App/lwip.c **** 
+ 134:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN 4_2 */
+ 135:../../CM7/LWIP/App/lwip.c **** /* USER CODE END 4_2 */
+ 136:../../CM7/LWIP/App/lwip.c ****   /* Handle timeouts */
+ 137:../../CM7/LWIP/App/lwip.c ****   sys_check_timeouts();
+ 138:../../CM7/LWIP/App/lwip.c **** 
+ 139:../../CM7/LWIP/App/lwip.c ****   Ethernet_Link_Periodic_Handle(&gnetif);
+ 140:../../CM7/LWIP/App/lwip.c **** 
+ 141:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN 4_3 */
+ 142:../../CM7/LWIP/App/lwip.c **** /* USER CODE END 4_3 */
+ 143:../../CM7/LWIP/App/lwip.c **** }
+ 144:../../CM7/LWIP/App/lwip.c **** 
+ 145:../../CM7/LWIP/App/lwip.c **** /**
+ARM GAS  /tmp/ccmArG9O.s 			page 4
+
+
+ 146:../../CM7/LWIP/App/lwip.c ****   * @brief  Notify the User about the network interface config status
+ 147:../../CM7/LWIP/App/lwip.c ****   * @param  netif: the network interface
+ 148:../../CM7/LWIP/App/lwip.c ****   * @retval None
+ 149:../../CM7/LWIP/App/lwip.c ****   */
+ 150:../../CM7/LWIP/App/lwip.c **** static void ethernet_link_status_updated(struct netif *netif)
+ 151:../../CM7/LWIP/App/lwip.c **** {
+  28              		.loc 1 151 1 view -0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  32              		@ link register save eliminated.
+ 152:../../CM7/LWIP/App/lwip.c ****   if (netif_is_up(netif))
+  33              		.loc 1 152 3 view .LVU1
+ 153:../../CM7/LWIP/App/lwip.c ****   {
+ 154:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN 5 */
+ 155:../../CM7/LWIP/App/lwip.c **** /* USER CODE END 5 */
+ 156:../../CM7/LWIP/App/lwip.c ****   }
+  34              		.loc 1 156 3 view .LVU2
+ 157:../../CM7/LWIP/App/lwip.c ****   else /* netif is down */
+ 158:../../CM7/LWIP/App/lwip.c ****   {
+ 159:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN 6 */
+ 160:../../CM7/LWIP/App/lwip.c **** /* USER CODE END 6 */
+ 161:../../CM7/LWIP/App/lwip.c ****   }
+  35              		.loc 1 161 3 view .LVU3
+ 162:../../CM7/LWIP/App/lwip.c **** }
+  36              		.loc 1 162 1 is_stmt 0 view .LVU4
+  37 0000 7047     		bx	lr
+  38              		.cfi_endproc
+  39              	.LFE173:
+  41              		.section	.text.Ethernet_Link_Periodic_Handle,"ax",%progbits
+  42              		.align	1
+  43              		.syntax unified
+  44              		.thumb
+  45              		.thumb_func
+  47              	Ethernet_Link_Periodic_Handle:
+  48              	.LVL1:
+  49              	.LFB171:
+ 103:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN 4_4_1 */
+  50              		.loc 1 103 1 is_stmt 1 view -0
+  51              		.cfi_startproc
+  52              		@ args = 0, pretend = 0, frame = 0
+  53              		@ frame_needed = 0, uses_anonymous_args = 0
+ 103:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN 4_4_1 */
+  54              		.loc 1 103 1 is_stmt 0 view .LVU6
+  55 0000 10B5     		push	{r4, lr}
+  56              	.LCFI0:
+  57              		.cfi_def_cfa_offset 8
+  58              		.cfi_offset 4, -8
+  59              		.cfi_offset 14, -4
+  60 0002 0446     		mov	r4, r0
+ 108:../../CM7/LWIP/App/lwip.c ****   {
+  61              		.loc 1 108 3 is_stmt 1 view .LVU7
+ 108:../../CM7/LWIP/App/lwip.c ****   {
+  62              		.loc 1 108 7 is_stmt 0 view .LVU8
+  63 0004 FFF7FEFF 		bl	HAL_GetTick
+  64              	.LVL2:
+ 108:../../CM7/LWIP/App/lwip.c ****   {
+ARM GAS  /tmp/ccmArG9O.s 			page 5
+
+
+  65              		.loc 1 108 21 discriminator 1 view .LVU9
+  66 0008 064B     		ldr	r3, .L6
+  67 000a 1B68     		ldr	r3, [r3]
+  68 000c C31A     		subs	r3, r0, r3
+ 108:../../CM7/LWIP/App/lwip.c ****   {
+  69              		.loc 1 108 6 discriminator 1 view .LVU10
+  70 000e 632B     		cmp	r3, #99
+  71 0010 00D8     		bhi	.L5
+  72              	.L2:
+ 115:../../CM7/LWIP/App/lwip.c **** 
+  73              		.loc 1 115 1 view .LVU11
+  74 0012 10BD     		pop	{r4, pc}
+  75              	.LVL3:
+  76              	.L5:
+ 110:../../CM7/LWIP/App/lwip.c ****     ethernet_link_check_state(netif);
+  77              		.loc 1 110 5 is_stmt 1 view .LVU12
+ 110:../../CM7/LWIP/App/lwip.c ****     ethernet_link_check_state(netif);
+  78              		.loc 1 110 25 is_stmt 0 view .LVU13
+  79 0014 FFF7FEFF 		bl	HAL_GetTick
+  80              	.LVL4:
+ 110:../../CM7/LWIP/App/lwip.c ****     ethernet_link_check_state(netif);
+  81              		.loc 1 110 23 discriminator 1 view .LVU14
+  82 0018 024B     		ldr	r3, .L6
+  83 001a 1860     		str	r0, [r3]
+ 111:../../CM7/LWIP/App/lwip.c ****   }
+  84              		.loc 1 111 5 is_stmt 1 view .LVU15
+  85 001c 2046     		mov	r0, r4
+  86 001e FFF7FEFF 		bl	ethernet_link_check_state
+  87              	.LVL5:
+ 115:../../CM7/LWIP/App/lwip.c **** 
+  88              		.loc 1 115 1 is_stmt 0 view .LVU16
+  89 0022 F6E7     		b	.L2
+  90              	.L7:
+  91              		.align	2
+  92              	.L6:
+  93 0024 00000000 		.word	EthernetLinkTimer
+  94              		.cfi_endproc
+  95              	.LFE171:
+  97              		.section	.text.MX_LWIP_Init,"ax",%progbits
+  98              		.align	1
+  99              		.global	MX_LWIP_Init
+ 100              		.syntax unified
+ 101              		.thumb
+ 102              		.thumb_func
+ 104              	MX_LWIP_Init:
+ 105              	.LFB170:
+  61:../../CM7/LWIP/App/lwip.c ****   /* Initialize the LwIP stack without RTOS */
+ 106              		.loc 1 61 1 is_stmt 1 view -0
+ 107              		.cfi_startproc
+ 108              		@ args = 0, pretend = 0, frame = 0
+ 109              		@ frame_needed = 0, uses_anonymous_args = 0
+ 110 0000 30B5     		push	{r4, r5, lr}
+ 111              	.LCFI1:
+ 112              		.cfi_def_cfa_offset 12
+ 113              		.cfi_offset 4, -12
+ 114              		.cfi_offset 5, -8
+ 115              		.cfi_offset 14, -4
+ARM GAS  /tmp/ccmArG9O.s 			page 6
+
+
+ 116 0002 85B0     		sub	sp, sp, #20
+ 117              	.LCFI2:
+ 118              		.cfi_def_cfa_offset 32
+  63:../../CM7/LWIP/App/lwip.c **** 
+ 119              		.loc 1 63 3 view .LVU18
+ 120 0004 FFF7FEFF 		bl	lwip_init
+ 121              	.LVL6:
+  66:../../CM7/LWIP/App/lwip.c ****   netmask.addr = 0;
+ 122              		.loc 1 66 3 view .LVU19
+  66:../../CM7/LWIP/App/lwip.c ****   netmask.addr = 0;
+ 123              		.loc 1 66 15 is_stmt 0 view .LVU20
+ 124 0008 0F49     		ldr	r1, .L10
+ 125 000a 0020     		movs	r0, #0
+ 126 000c 0860     		str	r0, [r1]
+  67:../../CM7/LWIP/App/lwip.c ****   gw.addr = 0;
+ 127              		.loc 1 67 3 is_stmt 1 view .LVU21
+  67:../../CM7/LWIP/App/lwip.c ****   gw.addr = 0;
+ 128              		.loc 1 67 16 is_stmt 0 view .LVU22
+ 129 000e 0F4A     		ldr	r2, .L10+4
+ 130 0010 1060     		str	r0, [r2]
+  68:../../CM7/LWIP/App/lwip.c **** 
+ 131              		.loc 1 68 3 is_stmt 1 view .LVU23
+  68:../../CM7/LWIP/App/lwip.c **** 
+ 132              		.loc 1 68 11 is_stmt 0 view .LVU24
+ 133 0012 0F4B     		ldr	r3, .L10+8
+ 134 0014 1860     		str	r0, [r3]
+  71:../../CM7/LWIP/App/lwip.c **** 
+ 135              		.loc 1 71 3 is_stmt 1 view .LVU25
+ 136 0016 0F4C     		ldr	r4, .L10+12
+ 137 0018 0F4D     		ldr	r5, .L10+16
+ 138 001a 0295     		str	r5, [sp, #8]
+ 139 001c 0F4D     		ldr	r5, .L10+20
+ 140 001e 0195     		str	r5, [sp, #4]
+ 141 0020 0090     		str	r0, [sp]
+ 142 0022 2046     		mov	r0, r4
+ 143 0024 FFF7FEFF 		bl	netif_add
+ 144              	.LVL7:
+  74:../../CM7/LWIP/App/lwip.c **** 
+ 145              		.loc 1 74 3 view .LVU26
+ 146 0028 2046     		mov	r0, r4
+ 147 002a FFF7FEFF 		bl	netif_set_default
+ 148              	.LVL8:
+  77:../../CM7/LWIP/App/lwip.c **** 
+ 149              		.loc 1 77 3 view .LVU27
+ 150 002e 2046     		mov	r0, r4
+ 151 0030 FFF7FEFF 		bl	netif_set_up
+ 152              	.LVL9:
+  80:../../CM7/LWIP/App/lwip.c **** 
+ 153              		.loc 1 80 3 view .LVU28
+ 154 0034 0A49     		ldr	r1, .L10+24
+ 155 0036 2046     		mov	r0, r4
+ 156 0038 FFF7FEFF 		bl	netif_set_link_callback
+ 157              	.LVL10:
+  83:../../CM7/LWIP/App/lwip.c **** 
+ 158              		.loc 1 83 3 view .LVU29
+ 159 003c 2046     		mov	r0, r4
+ 160 003e FFF7FEFF 		bl	dhcp_start
+ARM GAS  /tmp/ccmArG9O.s 			page 7
+
+
+ 161              	.LVL11:
+  88:../../CM7/LWIP/App/lwip.c **** 
+ 162              		.loc 1 88 1 is_stmt 0 view .LVU30
+ 163 0042 05B0     		add	sp, sp, #20
+ 164              	.LCFI3:
+ 165              		.cfi_def_cfa_offset 12
+ 166              		@ sp needed
+ 167 0044 30BD     		pop	{r4, r5, pc}
+ 168              	.L11:
+ 169 0046 00BF     		.align	2
+ 170              	.L10:
+ 171 0048 00000000 		.word	ipaddr
+ 172 004c 00000000 		.word	netmask
+ 173 0050 00000000 		.word	gw
+ 174 0054 00000000 		.word	gnetif
+ 175 0058 00000000 		.word	ethernet_input
+ 176 005c 00000000 		.word	ethernetif_init
+ 177 0060 00000000 		.word	ethernet_link_status_updated
+ 178              		.cfi_endproc
+ 179              	.LFE170:
+ 181              		.section	.text.MX_LWIP_Process,"ax",%progbits
+ 182              		.align	1
+ 183              		.global	MX_LWIP_Process
+ 184              		.syntax unified
+ 185              		.thumb
+ 186              		.thumb_func
+ 188              	MX_LWIP_Process:
+ 189              	.LFB172:
+ 129:../../CM7/LWIP/App/lwip.c **** /* USER CODE BEGIN 4_1 */
+ 190              		.loc 1 129 1 is_stmt 1 view -0
+ 191              		.cfi_startproc
+ 192              		@ args = 0, pretend = 0, frame = 0
+ 193              		@ frame_needed = 0, uses_anonymous_args = 0
+ 194 0000 10B5     		push	{r4, lr}
+ 195              	.LCFI4:
+ 196              		.cfi_def_cfa_offset 8
+ 197              		.cfi_offset 4, -8
+ 198              		.cfi_offset 14, -4
+ 132:../../CM7/LWIP/App/lwip.c **** 
+ 199              		.loc 1 132 3 view .LVU32
+ 200 0002 054C     		ldr	r4, .L14
+ 201 0004 2046     		mov	r0, r4
+ 202 0006 FFF7FEFF 		bl	ethernetif_input
+ 203              	.LVL12:
+ 137:../../CM7/LWIP/App/lwip.c **** 
+ 204              		.loc 1 137 3 view .LVU33
+ 205 000a FFF7FEFF 		bl	sys_check_timeouts
+ 206              	.LVL13:
+ 139:../../CM7/LWIP/App/lwip.c **** 
+ 207              		.loc 1 139 3 view .LVU34
+ 208 000e 2046     		mov	r0, r4
+ 209 0010 FFF7FEFF 		bl	Ethernet_Link_Periodic_Handle
+ 210              	.LVL14:
+ 143:../../CM7/LWIP/App/lwip.c **** 
+ 211              		.loc 1 143 1 is_stmt 0 view .LVU35
+ 212 0014 10BD     		pop	{r4, pc}
+ 213              	.L15:
+ARM GAS  /tmp/ccmArG9O.s 			page 8
+
+
+ 214 0016 00BF     		.align	2
+ 215              	.L14:
+ 216 0018 00000000 		.word	gnetif
+ 217              		.cfi_endproc
+ 218              	.LFE172:
+ 220              		.global	gw
+ 221              		.section	.bss.gw,"aw",%nobits
+ 222              		.align	2
+ 225              	gw:
+ 226 0000 00000000 		.space	4
+ 227              		.global	netmask
+ 228              		.section	.bss.netmask,"aw",%nobits
+ 229              		.align	2
+ 232              	netmask:
+ 233 0000 00000000 		.space	4
+ 234              		.global	ipaddr
+ 235              		.section	.bss.ipaddr,"aw",%nobits
+ 236              		.align	2
+ 239              	ipaddr:
+ 240 0000 00000000 		.space	4
+ 241              		.global	gnetif
+ 242              		.section	.bss.gnetif,"aw",%nobits
+ 243              		.align	2
+ 246              	gnetif:
+ 247 0000 00000000 		.space	56
+ 247      00000000 
+ 247      00000000 
+ 247      00000000 
+ 247      00000000 
+ 248              		.global	EthernetLinkTimer
+ 249              		.section	.bss.EthernetLinkTimer,"aw",%nobits
+ 250              		.align	2
+ 253              	EthernetLinkTimer:
+ 254 0000 00000000 		.space	4
+ 255              		.global	DHCPcoarseTimer
+ 256              		.section	.bss.DHCPcoarseTimer,"aw",%nobits
+ 257              		.align	2
+ 260              	DHCPcoarseTimer:
+ 261 0000 00000000 		.space	4
+ 262              		.global	DHCPfineTimer
+ 263              		.section	.bss.DHCPfineTimer,"aw",%nobits
+ 264              		.align	2
+ 267              	DHCPfineTimer:
+ 268 0000 00000000 		.space	4
+ 269              		.text
+ 270              	.Letext0:
+ 271              		.file 2 "/usr/arm-none-eabi/include/machine/_default_types.h"
+ 272              		.file 3 "/usr/arm-none-eabi/include/sys/_stdint.h"
+ 273              		.file 4 "../../Middlewares/Third_Party/LwIP/src/include/lwip/arch.h"
+ 274              		.file 5 "../../Middlewares/Third_Party/LwIP/src/include/lwip/err.h"
+ 275              		.file 6 "../../Middlewares/Third_Party/LwIP/src/include/lwip/pbuf.h"
+ 276              		.file 7 "../../Middlewares/Third_Party/LwIP/src/include/lwip/ip4_addr.h"
+ 277              		.file 8 "../../Middlewares/Third_Party/LwIP/src/include/lwip/ip_addr.h"
+ 278              		.file 9 "../../Middlewares/Third_Party/LwIP/src/include/lwip/netif.h"
+ 279              		.file 10 "../../CM7/LWIP/Target/ethernetif.h"
+ 280              		.file 11 "../../Middlewares/Third_Party/LwIP/src/include/lwip/dhcp.h"
+ 281              		.file 12 "../../Middlewares/Third_Party/LwIP/src/include/netif/ethernet.h"
+ARM GAS  /tmp/ccmArG9O.s 			page 9
+
+
+ 282              		.file 13 "../../Middlewares/Third_Party/LwIP/src/include/lwip/timeouts.h"
+ 283              		.file 14 "../../Middlewares/Third_Party/LwIP/src/include/lwip/init.h"
+ 284              		.file 15 "../../Middlewares/Third_Party/LwIP/src/include/lwip/memp.h"
+ 285              		.file 16 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h"
+ARM GAS  /tmp/ccmArG9O.s 			page 10
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 lwip.c
+     /tmp/ccmArG9O.s:20     .text.ethernet_link_status_updated:00000000 $t
+     /tmp/ccmArG9O.s:25     .text.ethernet_link_status_updated:00000000 ethernet_link_status_updated
+     /tmp/ccmArG9O.s:42     .text.Ethernet_Link_Periodic_Handle:00000000 $t
+     /tmp/ccmArG9O.s:47     .text.Ethernet_Link_Periodic_Handle:00000000 Ethernet_Link_Periodic_Handle
+     /tmp/ccmArG9O.s:93     .text.Ethernet_Link_Periodic_Handle:00000024 $d
+     /tmp/ccmArG9O.s:253    .bss.EthernetLinkTimer:00000000 EthernetLinkTimer
+     /tmp/ccmArG9O.s:98     .text.MX_LWIP_Init:00000000 $t
+     /tmp/ccmArG9O.s:104    .text.MX_LWIP_Init:00000000 MX_LWIP_Init
+     /tmp/ccmArG9O.s:171    .text.MX_LWIP_Init:00000048 $d
+     /tmp/ccmArG9O.s:239    .bss.ipaddr:00000000 ipaddr
+     /tmp/ccmArG9O.s:232    .bss.netmask:00000000 netmask
+     /tmp/ccmArG9O.s:225    .bss.gw:00000000 gw
+     /tmp/ccmArG9O.s:246    .bss.gnetif:00000000 gnetif
+     /tmp/ccmArG9O.s:182    .text.MX_LWIP_Process:00000000 $t
+     /tmp/ccmArG9O.s:188    .text.MX_LWIP_Process:00000000 MX_LWIP_Process
+     /tmp/ccmArG9O.s:216    .text.MX_LWIP_Process:00000018 $d
+     /tmp/ccmArG9O.s:222    .bss.gw:00000000 $d
+     /tmp/ccmArG9O.s:229    .bss.netmask:00000000 $d
+     /tmp/ccmArG9O.s:236    .bss.ipaddr:00000000 $d
+     /tmp/ccmArG9O.s:243    .bss.gnetif:00000000 $d
+     /tmp/ccmArG9O.s:250    .bss.EthernetLinkTimer:00000000 $d
+     /tmp/ccmArG9O.s:260    .bss.DHCPcoarseTimer:00000000 DHCPcoarseTimer
+     /tmp/ccmArG9O.s:257    .bss.DHCPcoarseTimer:00000000 $d
+     /tmp/ccmArG9O.s:267    .bss.DHCPfineTimer:00000000 DHCPfineTimer
+     /tmp/ccmArG9O.s:264    .bss.DHCPfineTimer:00000000 $d
+
+UNDEFINED SYMBOLS
+HAL_GetTick
+ethernet_link_check_state
+lwip_init
+netif_add
+netif_set_default
+netif_set_up
+netif_set_link_callback
+dhcp_start
+ethernet_input
+ethernetif_init
+ethernetif_input
+sys_check_timeouts

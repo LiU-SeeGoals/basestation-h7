@@ -1,0 +1,1 @@
+arm-none-eabi-gcc -g -mcpu=cortex-m7 -mthumb -specs=nano.specs -Wl,-Map=/home/re/dev/seegoals/basestation/build/basestation_CM7.map,--cref -Wl,--gc-sections -T /home/re/dev/seegoals/basestation/Buildfiles/CM7/stm32h755xx_flash_CM7.ld CMakeFiles/basestation_CM7.elf.dir/Buildfiles/CM7/startup_stm32h755xx_CM7.s.o -o basestation_CM7.elf  -lc -lm -lnosys

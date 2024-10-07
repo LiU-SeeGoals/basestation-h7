@@ -1,0 +1,5 @@
+/home/re/dev/seegoals/basestation/build/CMakeFiles/basestation_CM7.elf.dir
+/home/re/dev/seegoals/basestation/build/CMakeFiles/flash_cm7.dir
+/home/re/dev/seegoals/basestation/build/CMakeFiles/clean_all.dir
+/home/re/dev/seegoals/basestation/build/CMakeFiles/edit_cache.dir
+/home/re/dev/seegoals/basestation/build/CMakeFiles/rebuild_cache.dir
