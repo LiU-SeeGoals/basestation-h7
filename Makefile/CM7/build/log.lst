@@ -1,0 +1,1082 @@
+ARM GAS  /tmp/ccNQyXBN.s 			page 1
+
+
+   1              		.cpu cortex-m7
+   2              		.arch armv7e-m
+   3              		.fpu fpv5-d16
+   4              		.eabi_attribute 28, 1
+   5              		.eabi_attribute 20, 1
+   6              		.eabi_attribute 21, 1
+   7              		.eabi_attribute 23, 3
+   8              		.eabi_attribute 24, 1
+   9              		.eabi_attribute 25, 1
+  10              		.eabi_attribute 26, 1
+  11              		.eabi_attribute 30, 1
+  12              		.eabi_attribute 34, 1
+  13              		.eabi_attribute 18, 4
+  14              		.file	"log.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.file 1 "../../Libraries/fw-shared-modules/Src/log.c"
+  19              		.section	.rodata.LOG_Printf.str1.4,"aMS",%progbits,1
+  20              		.align	2
+  21              	.LC0:
+  22 0000 5B25732D 		.ascii	"[%s-%s] \000"
+  22      25735D20 
+  22      00
+  23              		.section	.text.LOG_Printf,"ax",%progbits
+  24              		.align	1
+  25              		.global	LOG_Printf
+  26              		.syntax unified
+  27              		.thumb
+  28              		.thumb_func
+  30              	LOG_Printf:
+  31              	.LVL0:
+  32              	.LFB149:
+   1:../../Libraries/fw-shared-modules/Src/log.c **** #include "log.h"
+   2:../../Libraries/fw-shared-modules/Src/log.c **** 
+   3:../../Libraries/fw-shared-modules/Src/log.c **** /* Privat includes */
+   4:../../Libraries/fw-shared-modules/Src/log.c **** #include <stdio.h>
+   5:../../Libraries/fw-shared-modules/Src/log.c **** #include <stdarg.h>
+   6:../../Libraries/fw-shared-modules/Src/log.c **** #include <string.h>
+   7:../../Libraries/fw-shared-modules/Src/log.c **** 
+   8:../../Libraries/fw-shared-modules/Src/log.c **** /* Private defines */
+   9:../../Libraries/fw-shared-modules/Src/log.c **** #define LOG_BACKENDS_AVAIL 2
+  10:../../Libraries/fw-shared-modules/Src/log.c **** #define LOG_MODULES_AVAIL 10
+  11:../../Libraries/fw-shared-modules/Src/log.c **** #define MODULE_NAME log
+  12:../../Libraries/fw-shared-modules/Src/log.c **** #define LOG_BACKEND_UART 0
+  13:../../Libraries/fw-shared-modules/Src/log.c **** #define LOG_BACKEND_BUFFER 1
+  14:../../Libraries/fw-shared-modules/Src/log.c **** 
+  15:../../Libraries/fw-shared-modules/Src/log.c **** /* Private variables */
+  16:../../Libraries/fw-shared-modules/Src/log.c **** static LOG_Module internal_log_mod;
+  17:../../Libraries/fw-shared-modules/Src/log.c **** static UART_HandleTypeDef *huart;
+  18:../../Libraries/fw-shared-modules/Src/log.c **** static LOG_Module* log_modules[LOG_MODULES_AVAIL];
+  19:../../Libraries/fw-shared-modules/Src/log.c **** static int modules_pointer = 0;
+  20:../../Libraries/fw-shared-modules/Src/log.c **** static char log_buffer[LOG_BUFFER_SIZE][LOG_MSG_SIZE];
+  21:../../Libraries/fw-shared-modules/Src/log.c **** static int log_buffer_pointer = 0;
+  22:../../Libraries/fw-shared-modules/Src/log.c **** static uint8_t cycled_logs = 0;
+  23:../../Libraries/fw-shared-modules/Src/log.c **** static LOG_Backend backends[LOG_BACKENDS_AVAIL] = {
+  24:../../Libraries/fw-shared-modules/Src/log.c ****   {
+ARM GAS  /tmp/ccNQyXBN.s 			page 2
+
+
+  25:../../Libraries/fw-shared-modules/Src/log.c ****     .name = "UART",
+  26:../../Libraries/fw-shared-modules/Src/log.c ****     .min_output_level = LOG_LEVEL_UI,
+  27:../../Libraries/fw-shared-modules/Src/log.c ****     .muted = 0
+  28:../../Libraries/fw-shared-modules/Src/log.c ****   },
+  29:../../Libraries/fw-shared-modules/Src/log.c ****   {
+  30:../../Libraries/fw-shared-modules/Src/log.c ****     .name = "Buffer",
+  31:../../Libraries/fw-shared-modules/Src/log.c ****     .min_output_level = LOG_LEVEL_TRACE,
+  32:../../Libraries/fw-shared-modules/Src/log.c ****     .muted = 0
+  33:../../Libraries/fw-shared-modules/Src/log.c ****   },
+  34:../../Libraries/fw-shared-modules/Src/log.c **** };
+  35:../../Libraries/fw-shared-modules/Src/log.c **** 
+  36:../../Libraries/fw-shared-modules/Src/log.c **** /*
+  37:../../Libraries/fw-shared-modules/Src/log.c ****  * Public function implementations
+  38:../../Libraries/fw-shared-modules/Src/log.c ****  */
+  39:../../Libraries/fw-shared-modules/Src/log.c **** void LOG_Init(UART_HandleTypeDef *handle) {
+  40:../../Libraries/fw-shared-modules/Src/log.c ****   huart = handle; 
+  41:../../Libraries/fw-shared-modules/Src/log.c ****   uint8_t newline[4] = {'\r', '\n', '\r', '\n'};
+  42:../../Libraries/fw-shared-modules/Src/log.c ****   HAL_UART_Transmit(huart, newline, 4, HAL_MAX_DELAY);
+  43:../../Libraries/fw-shared-modules/Src/log.c ****   LOG_InitModule(&internal_log_mod, "LOG", LOG_LEVEL_INFO);
+  44:../../Libraries/fw-shared-modules/Src/log.c ****   LOG_INFO("Initialised...\r\n");
+  45:../../Libraries/fw-shared-modules/Src/log.c **** }
+  46:../../Libraries/fw-shared-modules/Src/log.c **** 
+  47:../../Libraries/fw-shared-modules/Src/log.c **** void LOG_InitModule(LOG_Module *mod, const char* name, LOG_Level min_out_level) {
+  48:../../Libraries/fw-shared-modules/Src/log.c ****   mod->min_output_level = min_out_level;
+  49:../../Libraries/fw-shared-modules/Src/log.c ****   mod->name = name;
+  50:../../Libraries/fw-shared-modules/Src/log.c ****   mod->muted = 0;
+  51:../../Libraries/fw-shared-modules/Src/log.c ****   LOG_DEBUG("Adding module: %s\r\n", mod->name);
+  52:../../Libraries/fw-shared-modules/Src/log.c ****   log_modules[modules_pointer] = mod;
+  53:../../Libraries/fw-shared-modules/Src/log.c ****   modules_pointer++;
+  54:../../Libraries/fw-shared-modules/Src/log.c **** }
+  55:../../Libraries/fw-shared-modules/Src/log.c **** 
+  56:../../Libraries/fw-shared-modules/Src/log.c **** void LOG_Printf(LOG_Module *mod, LOG_Level msg_level, const char* format, ...) {
+  33              		.loc 1 56 80 view -0
+  34              		.cfi_startproc
+  35              		@ args = 4, pretend = 8, frame = 104
+  36              		@ frame_needed = 0, uses_anonymous_args = 1
+  37              		.loc 1 56 80 is_stmt 0 view .LVU1
+  38 0000 0CB4     		push	{r2, r3}
+  39              	.LCFI0:
+  40              		.cfi_def_cfa_offset 8
+  41              		.cfi_offset 2, -8
+  42              		.cfi_offset 3, -4
+  43 0002 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+  44              	.LCFI1:
+  45              		.cfi_def_cfa_offset 32
+  46              		.cfi_offset 4, -32
+  47              		.cfi_offset 5, -28
+  48              		.cfi_offset 6, -24
+  49              		.cfi_offset 7, -20
+  50              		.cfi_offset 8, -16
+  51              		.cfi_offset 14, -12
+  52 0006 9CB0     		sub	sp, sp, #112
+  53              	.LCFI2:
+  54              		.cfi_def_cfa_offset 144
+  57:../../Libraries/fw-shared-modules/Src/log.c ****   if (msg_level >= mod->min_output_level && !mod->muted) {
+  55              		.loc 1 57 3 is_stmt 1 view .LVU2
+  56              		.loc 1 57 23 is_stmt 0 view .LVU3
+ARM GAS  /tmp/ccNQyXBN.s 			page 3
+
+
+  57 0008 0378     		ldrb	r3, [r0]	@ zero_extendqisi2
+  58              		.loc 1 57 6 view .LVU4
+  59 000a 8B42     		cmp	r3, r1
+  60 000c 6AD8     		bhi	.L1
+  61 000e 0C46     		mov	r4, r1
+  62              		.loc 1 57 49 discriminator 1 view .LVU5
+  63 0010 037A     		ldrb	r3, [r0, #8]	@ zero_extendqisi2
+  64              		.loc 1 57 42 discriminator 1 view .LVU6
+  65 0012 002B     		cmp	r3, #0
+  66 0014 66D1     		bne	.L1
+  67              	.LBB2:
+  58:../../Libraries/fw-shared-modules/Src/log.c ****     int offset = 0;
+  68              		.loc 1 58 5 is_stmt 1 view .LVU7
+  69              	.LVL1:
+  59:../../Libraries/fw-shared-modules/Src/log.c ****     char msg_buffer[LOG_MSG_SIZE];
+  70              		.loc 1 59 5 view .LVU8
+  60:../../Libraries/fw-shared-modules/Src/log.c **** 
+  61:../../Libraries/fw-shared-modules/Src/log.c ****     if (msg_level != LOG_LEVEL_UI) {
+  71              		.loc 1 61 5 view .LVU9
+  72              		.loc 1 61 8 is_stmt 0 view .LVU10
+  73 0016 79B1     		cbz	r1, .L9
+  62:../../Libraries/fw-shared-modules/Src/log.c ****       offset += snprintf(msg_buffer, LOG_MSG_SIZE, "[%s-%s] ", mod->name, LOG_LEVEL[msg_level].shor
+  74              		.loc 1 62 7 is_stmt 1 view .LVU11
+  75              		.loc 1 62 17 is_stmt 0 view .LVU12
+  76 0018 01EB4102 		add	r2, r1, r1, lsl #1
+  77 001c 354B     		ldr	r3, .L15
+  78 001e 03EB8203 		add	r3, r3, r2, lsl #2
+  79 0022 9B68     		ldr	r3, [r3, #8]
+  80 0024 0093     		str	r3, [sp]
+  81 0026 4368     		ldr	r3, [r0, #4]
+  82 0028 334A     		ldr	r2, .L15+4
+  83 002a 6421     		movs	r1, #100
+  84              	.LVL2:
+  85              		.loc 1 62 17 view .LVU13
+  86 002c 03A8     		add	r0, sp, #12
+  87              	.LVL3:
+  88              		.loc 1 62 17 view .LVU14
+  89 002e FFF7FEFF 		bl	snprintf
+  90              	.LVL4:
+  63:../../Libraries/fw-shared-modules/Src/log.c ****     }
+  64:../../Libraries/fw-shared-modules/Src/log.c **** 
+  65:../../Libraries/fw-shared-modules/Src/log.c ****     if (offset < LOG_MSG_SIZE - 1) {
+  91              		.loc 1 65 5 is_stmt 1 view .LVU15
+  92              		.loc 1 65 8 is_stmt 0 view .LVU16
+  93 0032 6228     		cmp	r0, #98
+  94 0034 0BDC     		bgt	.L4
+  95 0036 00E0     		b	.L3
+  96              	.LVL5:
+  97              	.L9:
+  58:../../Libraries/fw-shared-modules/Src/log.c ****     char msg_buffer[LOG_MSG_SIZE];
+  98              		.loc 1 58 9 view .LVU17
+  99 0038 0020     		movs	r0, #0
+ 100              	.LVL6:
+ 101              	.L3:
+ 102              	.LBB3:
+  66:../../Libraries/fw-shared-modules/Src/log.c ****       va_list args;
+ 103              		.loc 1 66 7 is_stmt 1 view .LVU18
+ARM GAS  /tmp/ccNQyXBN.s 			page 4
+
+
+  67:../../Libraries/fw-shared-modules/Src/log.c ****       va_start(args, format);
+ 104              		.loc 1 67 7 view .LVU19
+ 105 003a 23AB     		add	r3, sp, #140
+ 106 003c 0293     		str	r3, [sp, #8]
+  68:../../Libraries/fw-shared-modules/Src/log.c ****       vsnprintf(msg_buffer + offset, LOG_MSG_SIZE - offset, format, args);
+ 107              		.loc 1 68 7 view .LVU20
+ 108 003e 229A     		ldr	r2, [sp, #136]
+ 109 0040 C0F16401 		rsb	r1, r0, #100
+ 110 0044 0DF10C0C 		add	ip, sp, #12
+ 111 0048 6044     		add	r0, r0, ip
+ 112 004a FFF7FEFF 		bl	vsnprintf
+ 113              	.LVL7:
+  69:../../Libraries/fw-shared-modules/Src/log.c ****       va_end(args);
+ 114              		.loc 1 69 7 view .LVU21
+ 115              	.L4:
+ 116              	.LBE3:
+  70:../../Libraries/fw-shared-modules/Src/log.c ****     }
+  71:../../Libraries/fw-shared-modules/Src/log.c **** 
+  72:../../Libraries/fw-shared-modules/Src/log.c ****     if (msg_level >= backends[LOG_BACKEND_UART].min_output_level &&
+ 117              		.loc 1 72 5 view .LVU22
+ 118              		.loc 1 72 48 is_stmt 0 view .LVU23
+ 119 004e 2B4B     		ldr	r3, .L15+8
+ 120 0050 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 121              		.loc 1 72 8 view .LVU24
+ 122 0052 A342     		cmp	r3, r4
+ 123 0054 02D8     		bhi	.L5
+  73:../../Libraries/fw-shared-modules/Src/log.c ****         !backends[LOG_BACKEND_UART].muted) {
+ 124              		.loc 1 73 36 view .LVU25
+ 125 0056 294B     		ldr	r3, .L15+8
+ 126 0058 1B7A     		ldrb	r3, [r3, #8]	@ zero_extendqisi2
+  72:../../Libraries/fw-shared-modules/Src/log.c ****         !backends[LOG_BACKEND_UART].muted) {
+ 127              		.loc 1 72 66 discriminator 1 view .LVU26
+ 128 005a 4BB3     		cbz	r3, .L13
+ 129              	.L5:
+  74:../../Libraries/fw-shared-modules/Src/log.c ****       HAL_UART_Transmit(huart, (uint8_t*)msg_buffer, strlen(msg_buffer), HAL_MAX_DELAY);
+  75:../../Libraries/fw-shared-modules/Src/log.c ****     }
+  76:../../Libraries/fw-shared-modules/Src/log.c **** 
+  77:../../Libraries/fw-shared-modules/Src/log.c ****     if (msg_level >= backends[LOG_BACKEND_BUFFER].min_output_level &&
+ 130              		.loc 1 77 5 is_stmt 1 view .LVU27
+ 131              		.loc 1 77 50 is_stmt 0 view .LVU28
+ 132 005c 274B     		ldr	r3, .L15+8
+ 133 005e 1B7B     		ldrb	r3, [r3, #12]	@ zero_extendqisi2
+ 134              		.loc 1 77 8 view .LVU29
+ 135 0060 A342     		cmp	r3, r4
+ 136 0062 3FD8     		bhi	.L1
+  78:../../Libraries/fw-shared-modules/Src/log.c ****         !backends[LOG_BACKEND_BUFFER].muted) {
+ 137              		.loc 1 78 38 view .LVU30
+ 138 0064 254B     		ldr	r3, .L15+8
+ 139 0066 1B7D     		ldrb	r3, [r3, #20]	@ zero_extendqisi2
+  77:../../Libraries/fw-shared-modules/Src/log.c ****         !backends[LOG_BACKEND_BUFFER].muted) {
+ 140              		.loc 1 77 68 discriminator 1 view .LVU31
+ 141 0068 002B     		cmp	r3, #0
+ 142 006a 3BD1     		bne	.L1
+  79:../../Libraries/fw-shared-modules/Src/log.c ****       if (cycled_logs) {
+ 143              		.loc 1 79 7 is_stmt 1 view .LVU32
+ 144              		.loc 1 79 11 is_stmt 0 view .LVU33
+ 145 006c 244B     		ldr	r3, .L15+12
+ARM GAS  /tmp/ccNQyXBN.s 			page 5
+
+
+ 146 006e 1D78     		ldrb	r5, [r3]	@ zero_extendqisi2
+ 147              		.loc 1 79 10 view .LVU34
+ 148 0070 5DBB     		cbnz	r5, .L14
+ 149              	.L7:
+  80:../../Libraries/fw-shared-modules/Src/log.c ****         memset(log_buffer[log_buffer_pointer], 0, LOG_MSG_SIZE);
+  81:../../Libraries/fw-shared-modules/Src/log.c ****       }
+  82:../../Libraries/fw-shared-modules/Src/log.c ****       strncpy(log_buffer[log_buffer_pointer], msg_buffer, strlen(msg_buffer));
+ 150              		.loc 1 82 7 is_stmt 1 view .LVU35
+ 151              		.loc 1 82 25 is_stmt 0 view .LVU36
+ 152 0072 244E     		ldr	r6, .L15+16
+ 153 0074 3468     		ldr	r4, [r6]
+ 154              	.LVL8:
+ 155              		.loc 1 82 25 view .LVU37
+ 156 0076 6423     		movs	r3, #100
+ 157 0078 234F     		ldr	r7, .L15+20
+ 158 007a 03FB0477 		mla	r7, r3, r4, r7
+ 159              		.loc 1 82 7 view .LVU38
+ 160 007e 0DF10C08 		add	r8, sp, #12
+ 161 0082 4046     		mov	r0, r8
+ 162 0084 FFF7FEFF 		bl	strlen
+ 163              	.LVL9:
+ 164 0088 0246     		mov	r2, r0
+ 165              		.loc 1 82 7 discriminator 1 view .LVU39
+ 166 008a 4146     		mov	r1, r8
+ 167 008c 3846     		mov	r0, r7
+ 168 008e FFF7FEFF 		bl	strncpy
+ 169              	.LVL10:
+  83:../../Libraries/fw-shared-modules/Src/log.c ****       log_buffer_pointer = (log_buffer_pointer + 1) % LOG_BUFFER_SIZE;
+ 170              		.loc 1 83 7 is_stmt 1 view .LVU40
+ 171              		.loc 1 83 48 is_stmt 0 view .LVU41
+ 172 0092 621C     		adds	r2, r4, #1
+ 173              		.loc 1 83 53 view .LVU42
+ 174 0094 1D49     		ldr	r1, .L15+24
+ 175 0096 81FB0231 		smull	r3, r1, r1, r2
+ 176 009a D317     		asrs	r3, r2, #31
+ 177 009c C3EB6103 		rsb	r3, r3, r1, asr #1
+ 178 00a0 03EB8303 		add	r3, r3, r3, lsl #2
+ 179 00a4 D31A     		subs	r3, r2, r3
+ 180              		.loc 1 83 26 view .LVU43
+ 181 00a6 3360     		str	r3, [r6]
+  84:../../Libraries/fw-shared-modules/Src/log.c ****       cycled_logs = cycled_logs || log_buffer_pointer == 0;
+ 182              		.loc 1 84 7 is_stmt 1 view .LVU44
+ 183              		.loc 1 84 33 is_stmt 0 view .LVU45
+ 184 00a8 CDB9     		cbnz	r5, .L10
+ 185              		.loc 1 84 33 discriminator 2 view .LVU46
+ 186 00aa 03BB     		cbnz	r3, .L11
+ 187              		.loc 1 84 33 discriminator 3 view .LVU47
+ 188 00ac 0122     		movs	r2, #1
+ 189 00ae 17E0     		b	.L8
+ 190              	.L13:
+  74:../../Libraries/fw-shared-modules/Src/log.c ****     }
+ 191              		.loc 1 74 7 is_stmt 1 view .LVU48
+  74:../../Libraries/fw-shared-modules/Src/log.c ****     }
+ 192              		.loc 1 74 54 is_stmt 0 view .LVU49
+ 193 00b0 03AD     		add	r5, sp, #12
+ 194 00b2 2846     		mov	r0, r5
+ 195 00b4 FFF7FEFF 		bl	strlen
+ARM GAS  /tmp/ccNQyXBN.s 			page 6
+
+
+ 196              	.LVL11:
+  74:../../Libraries/fw-shared-modules/Src/log.c ****     }
+ 197              		.loc 1 74 7 discriminator 1 view .LVU50
+ 198 00b8 4FF0FF33 		mov	r3, #-1
+ 199 00bc 82B2     		uxth	r2, r0
+ 200 00be 2946     		mov	r1, r5
+ 201 00c0 1348     		ldr	r0, .L15+28
+ 202 00c2 0068     		ldr	r0, [r0]
+ 203 00c4 FFF7FEFF 		bl	HAL_UART_Transmit
+ 204              	.LVL12:
+ 205 00c8 C8E7     		b	.L5
+ 206              	.L14:
+  80:../../Libraries/fw-shared-modules/Src/log.c ****       }
+ 207              		.loc 1 80 9 is_stmt 1 view .LVU51
+  80:../../Libraries/fw-shared-modules/Src/log.c ****       }
+ 208              		.loc 1 80 26 is_stmt 0 view .LVU52
+ 209 00ca 0E4B     		ldr	r3, .L15+16
+ 210 00cc 1868     		ldr	r0, [r3]
+ 211 00ce 6422     		movs	r2, #100
+  80:../../Libraries/fw-shared-modules/Src/log.c ****       }
+ 212              		.loc 1 80 9 view .LVU53
+ 213 00d0 0021     		movs	r1, #0
+ 214 00d2 0D4B     		ldr	r3, .L15+20
+ 215 00d4 02FB0030 		mla	r0, r2, r0, r3
+ 216 00d8 FFF7FEFF 		bl	memset
+ 217              	.LVL13:
+ 218 00dc C9E7     		b	.L7
+ 219              	.L10:
+ 220              		.loc 1 84 33 discriminator 3 view .LVU54
+ 221 00de 0122     		movs	r2, #1
+ 222              	.L8:
+ 223              		.loc 1 84 19 discriminator 6 view .LVU55
+ 224 00e0 074B     		ldr	r3, .L15+12
+ 225 00e2 1A70     		strb	r2, [r3]
+ 226              	.L1:
+ 227              	.LBE2:
+  85:../../Libraries/fw-shared-modules/Src/log.c ****     }
+  86:../../Libraries/fw-shared-modules/Src/log.c ****   }
+  87:../../Libraries/fw-shared-modules/Src/log.c **** }
+ 228              		.loc 1 87 1 view .LVU56
+ 229 00e4 1CB0     		add	sp, sp, #112
+ 230              	.LCFI3:
+ 231              		.cfi_remember_state
+ 232              		.cfi_def_cfa_offset 32
+ 233              		@ sp needed
+ 234 00e6 BDE8F041 		pop	{r4, r5, r6, r7, r8, lr}
+ 235              	.LCFI4:
+ 236              		.cfi_restore 14
+ 237              		.cfi_restore 8
+ 238              		.cfi_restore 7
+ 239              		.cfi_restore 6
+ 240              		.cfi_restore 5
+ 241              		.cfi_restore 4
+ 242              		.cfi_def_cfa_offset 8
+ 243 00ea 02B0     		add	sp, sp, #8
+ 244              	.LCFI5:
+ 245              		.cfi_restore 3
+ARM GAS  /tmp/ccNQyXBN.s 			page 7
+
+
+ 246              		.cfi_restore 2
+ 247              		.cfi_def_cfa_offset 0
+ 248 00ec 7047     		bx	lr
+ 249              	.L11:
+ 250              	.LCFI6:
+ 251              		.cfi_restore_state
+ 252              	.LBB4:
+  84:../../Libraries/fw-shared-modules/Src/log.c ****     }
+ 253              		.loc 1 84 33 discriminator 4 view .LVU57
+ 254 00ee 0022     		movs	r2, #0
+ 255 00f0 F6E7     		b	.L8
+ 256              	.L16:
+ 257 00f2 00BF     		.align	2
+ 258              	.L15:
+ 259 00f4 00000000 		.word	LOG_LEVEL
+ 260 00f8 00000000 		.word	.LC0
+ 261 00fc 00000000 		.word	backends
+ 262 0100 00000000 		.word	cycled_logs
+ 263 0104 00000000 		.word	log_buffer_pointer
+ 264 0108 00000000 		.word	log_buffer
+ 265 010c 67666666 		.word	1717986919
+ 266 0110 00000000 		.word	huart
+ 267              	.LBE4:
+ 268              		.cfi_endproc
+ 269              	.LFE149:
+ 271              		.section	.rodata.LOG_InitModule.str1.4,"aMS",%progbits,1
+ 272              		.align	2
+ 273              	.LC1:
+ 274 0000 41646469 		.ascii	"Adding module: %s\015\012\000"
+ 274      6E67206D 
+ 274      6F64756C 
+ 274      653A2025 
+ 274      730D0A00 
+ 275              		.section	.text.LOG_InitModule,"ax",%progbits
+ 276              		.align	1
+ 277              		.global	LOG_InitModule
+ 278              		.syntax unified
+ 279              		.thumb
+ 280              		.thumb_func
+ 282              	LOG_InitModule:
+ 283              	.LVL14:
+ 284              	.LFB148:
+  47:../../Libraries/fw-shared-modules/Src/log.c ****   mod->min_output_level = min_out_level;
+ 285              		.loc 1 47 81 is_stmt 1 view -0
+ 286              		.cfi_startproc
+ 287              		@ args = 0, pretend = 0, frame = 0
+ 288              		@ frame_needed = 0, uses_anonymous_args = 0
+  47:../../Libraries/fw-shared-modules/Src/log.c ****   mod->min_output_level = min_out_level;
+ 289              		.loc 1 47 81 is_stmt 0 view .LVU59
+ 290 0000 10B5     		push	{r4, lr}
+ 291              	.LCFI7:
+ 292              		.cfi_def_cfa_offset 8
+ 293              		.cfi_offset 4, -8
+ 294              		.cfi_offset 14, -4
+ 295 0002 0446     		mov	r4, r0
+ 296 0004 0B46     		mov	r3, r1
+  48:../../Libraries/fw-shared-modules/Src/log.c ****   mod->name = name;
+ARM GAS  /tmp/ccNQyXBN.s 			page 8
+
+
+ 297              		.loc 1 48 3 is_stmt 1 view .LVU60
+  48:../../Libraries/fw-shared-modules/Src/log.c ****   mod->name = name;
+ 298              		.loc 1 48 25 is_stmt 0 view .LVU61
+ 299 0006 0270     		strb	r2, [r0]
+  49:../../Libraries/fw-shared-modules/Src/log.c ****   mod->muted = 0;
+ 300              		.loc 1 49 3 is_stmt 1 view .LVU62
+  49:../../Libraries/fw-shared-modules/Src/log.c ****   mod->muted = 0;
+ 301              		.loc 1 49 13 is_stmt 0 view .LVU63
+ 302 0008 4160     		str	r1, [r0, #4]
+  50:../../Libraries/fw-shared-modules/Src/log.c ****   LOG_DEBUG("Adding module: %s\r\n", mod->name);
+ 303              		.loc 1 50 3 is_stmt 1 view .LVU64
+  50:../../Libraries/fw-shared-modules/Src/log.c ****   LOG_DEBUG("Adding module: %s\r\n", mod->name);
+ 304              		.loc 1 50 14 is_stmt 0 view .LVU65
+ 305 000a 0022     		movs	r2, #0
+ 306              	.LVL15:
+  50:../../Libraries/fw-shared-modules/Src/log.c ****   LOG_DEBUG("Adding module: %s\r\n", mod->name);
+ 307              		.loc 1 50 14 view .LVU66
+ 308 000c 0272     		strb	r2, [r0, #8]
+  51:../../Libraries/fw-shared-modules/Src/log.c ****   log_modules[modules_pointer] = mod;
+ 309              		.loc 1 51 3 is_stmt 1 view .LVU67
+ 310 000e 064A     		ldr	r2, .L19
+ 311 0010 0421     		movs	r1, #4
+ 312              	.LVL16:
+  51:../../Libraries/fw-shared-modules/Src/log.c ****   log_modules[modules_pointer] = mod;
+ 313              		.loc 1 51 3 is_stmt 0 view .LVU68
+ 314 0012 0648     		ldr	r0, .L19+4
+ 315              	.LVL17:
+  51:../../Libraries/fw-shared-modules/Src/log.c ****   log_modules[modules_pointer] = mod;
+ 316              		.loc 1 51 3 view .LVU69
+ 317 0014 FFF7FEFF 		bl	LOG_Printf
+ 318              	.LVL18:
+  52:../../Libraries/fw-shared-modules/Src/log.c ****   modules_pointer++;
+ 319              		.loc 1 52 3 is_stmt 1 view .LVU70
+  52:../../Libraries/fw-shared-modules/Src/log.c ****   modules_pointer++;
+ 320              		.loc 1 52 14 is_stmt 0 view .LVU71
+ 321 0018 054A     		ldr	r2, .L19+8
+ 322 001a 1368     		ldr	r3, [r2]
+  52:../../Libraries/fw-shared-modules/Src/log.c ****   modules_pointer++;
+ 323              		.loc 1 52 32 view .LVU72
+ 324 001c 0549     		ldr	r1, .L19+12
+ 325 001e 41F82340 		str	r4, [r1, r3, lsl #2]
+  53:../../Libraries/fw-shared-modules/Src/log.c **** }
+ 326              		.loc 1 53 3 is_stmt 1 view .LVU73
+  53:../../Libraries/fw-shared-modules/Src/log.c **** }
+ 327              		.loc 1 53 18 is_stmt 0 view .LVU74
+ 328 0022 0133     		adds	r3, r3, #1
+ 329 0024 1360     		str	r3, [r2]
+  54:../../Libraries/fw-shared-modules/Src/log.c **** 
+ 330              		.loc 1 54 1 view .LVU75
+ 331 0026 10BD     		pop	{r4, pc}
+ 332              	.LVL19:
+ 333              	.L20:
+  54:../../Libraries/fw-shared-modules/Src/log.c **** 
+ 334              		.loc 1 54 1 view .LVU76
+ 335              		.align	2
+ 336              	.L19:
+ 337 0028 00000000 		.word	.LC1
+ARM GAS  /tmp/ccNQyXBN.s 			page 9
+
+
+ 338 002c 00000000 		.word	internal_log_mod
+ 339 0030 00000000 		.word	modules_pointer
+ 340 0034 00000000 		.word	log_modules
+ 341              		.cfi_endproc
+ 342              	.LFE148:
+ 344              		.section	.rodata.LOG_Init.str1.4,"aMS",%progbits,1
+ 345              		.align	2
+ 346              	.LC2:
+ 347 0000 4C4F4700 		.ascii	"LOG\000"
+ 348              		.align	2
+ 349              	.LC3:
+ 350 0004 496E6974 		.ascii	"Initialised...\015\012\000"
+ 350      69616C69 
+ 350      7365642E 
+ 350      2E2E0D0A 
+ 350      00
+ 351              		.section	.text.LOG_Init,"ax",%progbits
+ 352              		.align	1
+ 353              		.global	LOG_Init
+ 354              		.syntax unified
+ 355              		.thumb
+ 356              		.thumb_func
+ 358              	LOG_Init:
+ 359              	.LVL20:
+ 360              	.LFB147:
+  39:../../Libraries/fw-shared-modules/Src/log.c ****   huart = handle; 
+ 361              		.loc 1 39 43 is_stmt 1 view -0
+ 362              		.cfi_startproc
+ 363              		@ args = 0, pretend = 0, frame = 8
+ 364              		@ frame_needed = 0, uses_anonymous_args = 0
+  39:../../Libraries/fw-shared-modules/Src/log.c ****   huart = handle; 
+ 365              		.loc 1 39 43 is_stmt 0 view .LVU78
+ 366 0000 10B5     		push	{r4, lr}
+ 367              	.LCFI8:
+ 368              		.cfi_def_cfa_offset 8
+ 369              		.cfi_offset 4, -8
+ 370              		.cfi_offset 14, -4
+ 371 0002 82B0     		sub	sp, sp, #8
+ 372              	.LCFI9:
+ 373              		.cfi_def_cfa_offset 16
+  40:../../Libraries/fw-shared-modules/Src/log.c ****   uint8_t newline[4] = {'\r', '\n', '\r', '\n'};
+ 374              		.loc 1 40 3 is_stmt 1 view .LVU79
+  40:../../Libraries/fw-shared-modules/Src/log.c ****   uint8_t newline[4] = {'\r', '\n', '\r', '\n'};
+ 375              		.loc 1 40 9 is_stmt 0 view .LVU80
+ 376 0004 0B4B     		ldr	r3, .L23
+ 377 0006 1860     		str	r0, [r3]
+  41:../../Libraries/fw-shared-modules/Src/log.c ****   HAL_UART_Transmit(huart, newline, 4, HAL_MAX_DELAY);
+ 378              		.loc 1 41 3 is_stmt 1 view .LVU81
+  41:../../Libraries/fw-shared-modules/Src/log.c ****   HAL_UART_Transmit(huart, newline, 4, HAL_MAX_DELAY);
+ 379              		.loc 1 41 11 is_stmt 0 view .LVU82
+ 380 0008 0B4B     		ldr	r3, .L23+4
+ 381 000a 0193     		str	r3, [sp, #4]
+  42:../../Libraries/fw-shared-modules/Src/log.c ****   LOG_InitModule(&internal_log_mod, "LOG", LOG_LEVEL_INFO);
+ 382              		.loc 1 42 3 is_stmt 1 view .LVU83
+ 383 000c 4FF0FF33 		mov	r3, #-1
+ 384 0010 0422     		movs	r2, #4
+ 385 0012 0DEB0201 		add	r1, sp, r2
+ARM GAS  /tmp/ccNQyXBN.s 			page 10
+
+
+ 386 0016 FFF7FEFF 		bl	HAL_UART_Transmit
+ 387              	.LVL21:
+  43:../../Libraries/fw-shared-modules/Src/log.c ****   LOG_INFO("Initialised...\r\n");
+ 388              		.loc 1 43 3 view .LVU84
+ 389 001a 084C     		ldr	r4, .L23+8
+ 390 001c 0522     		movs	r2, #5
+ 391 001e 0849     		ldr	r1, .L23+12
+ 392 0020 2046     		mov	r0, r4
+ 393 0022 FFF7FEFF 		bl	LOG_InitModule
+ 394              	.LVL22:
+  44:../../Libraries/fw-shared-modules/Src/log.c **** }
+ 395              		.loc 1 44 3 view .LVU85
+ 396 0026 074A     		ldr	r2, .L23+16
+ 397 0028 0521     		movs	r1, #5
+ 398 002a 2046     		mov	r0, r4
+ 399 002c FFF7FEFF 		bl	LOG_Printf
+ 400              	.LVL23:
+  45:../../Libraries/fw-shared-modules/Src/log.c **** 
+ 401              		.loc 1 45 1 is_stmt 0 view .LVU86
+ 402 0030 02B0     		add	sp, sp, #8
+ 403              	.LCFI10:
+ 404              		.cfi_def_cfa_offset 8
+ 405              		@ sp needed
+ 406 0032 10BD     		pop	{r4, pc}
+ 407              	.L24:
+ 408              		.align	2
+ 409              	.L23:
+ 410 0034 00000000 		.word	huart
+ 411 0038 0D0A0D0A 		.word	168626701
+ 412 003c 00000000 		.word	internal_log_mod
+ 413 0040 00000000 		.word	.LC2
+ 414 0044 04000000 		.word	.LC3
+ 415              		.cfi_endproc
+ 416              	.LFE147:
+ 418              		.section	.text.LOG_GetModules,"ax",%progbits
+ 419              		.align	1
+ 420              		.global	LOG_GetModules
+ 421              		.syntax unified
+ 422              		.thumb
+ 423              		.thumb_func
+ 425              	LOG_GetModules:
+ 426              	.LVL24:
+ 427              	.LFB150:
+  88:../../Libraries/fw-shared-modules/Src/log.c **** 
+  89:../../Libraries/fw-shared-modules/Src/log.c **** LOG_Module** LOG_GetModules(int *len) {
+ 428              		.loc 1 89 39 is_stmt 1 view -0
+ 429              		.cfi_startproc
+ 430              		@ args = 0, pretend = 0, frame = 0
+ 431              		@ frame_needed = 0, uses_anonymous_args = 0
+ 432              		@ link register save eliminated.
+  90:../../Libraries/fw-shared-modules/Src/log.c ****   *len = modules_pointer;
+ 433              		.loc 1 90 3 view .LVU88
+ 434              		.loc 1 90 8 is_stmt 0 view .LVU89
+ 435 0000 024B     		ldr	r3, .L26
+ 436 0002 1B68     		ldr	r3, [r3]
+ 437 0004 0360     		str	r3, [r0]
+  91:../../Libraries/fw-shared-modules/Src/log.c ****   return log_modules;
+ARM GAS  /tmp/ccNQyXBN.s 			page 11
+
+
+ 438              		.loc 1 91 3 is_stmt 1 view .LVU90
+  92:../../Libraries/fw-shared-modules/Src/log.c **** }
+ 439              		.loc 1 92 1 is_stmt 0 view .LVU91
+ 440 0006 0248     		ldr	r0, .L26+4
+ 441              	.LVL25:
+ 442              		.loc 1 92 1 view .LVU92
+ 443 0008 7047     		bx	lr
+ 444              	.L27:
+ 445 000a 00BF     		.align	2
+ 446              	.L26:
+ 447 000c 00000000 		.word	modules_pointer
+ 448 0010 00000000 		.word	log_modules
+ 449              		.cfi_endproc
+ 450              	.LFE150:
+ 452              		.section	.text.LOG_GetModule,"ax",%progbits
+ 453              		.align	1
+ 454              		.global	LOG_GetModule
+ 455              		.syntax unified
+ 456              		.thumb
+ 457              		.thumb_func
+ 459              	LOG_GetModule:
+ 460              	.LVL26:
+ 461              	.LFB151:
+  93:../../Libraries/fw-shared-modules/Src/log.c **** 
+  94:../../Libraries/fw-shared-modules/Src/log.c **** LOG_Module* LOG_GetModule(int index) {
+ 462              		.loc 1 94 38 is_stmt 1 view -0
+ 463              		.cfi_startproc
+ 464              		@ args = 0, pretend = 0, frame = 0
+ 465              		@ frame_needed = 0, uses_anonymous_args = 0
+ 466              		@ link register save eliminated.
+  95:../../Libraries/fw-shared-modules/Src/log.c ****   if (index < 0 || index > modules_pointer) {
+ 467              		.loc 1 95 3 view .LVU94
+ 468              		.loc 1 95 6 is_stmt 0 view .LVU95
+ 469 0000 0028     		cmp	r0, #0
+ 470              		.loc 1 95 6 view .LVU96
+ 471 0002 07DB     		blt	.L30
+ 472              		.loc 1 95 26 discriminator 1 view .LVU97
+ 473 0004 054B     		ldr	r3, .L32
+ 474 0006 1B68     		ldr	r3, [r3]
+ 475              		.loc 1 95 17 discriminator 1 view .LVU98
+ 476 0008 8342     		cmp	r3, r0
+ 477 000a 05DB     		blt	.L31
+  96:../../Libraries/fw-shared-modules/Src/log.c ****     return NULL;
+  97:../../Libraries/fw-shared-modules/Src/log.c ****   }
+  98:../../Libraries/fw-shared-modules/Src/log.c ****   return log_modules[index];
+ 478              		.loc 1 98 3 is_stmt 1 view .LVU99
+ 479              		.loc 1 98 21 is_stmt 0 view .LVU100
+ 480 000c 044B     		ldr	r3, .L32+4
+ 481 000e 53F82000 		ldr	r0, [r3, r0, lsl #2]
+ 482              	.LVL27:
+ 483              		.loc 1 98 21 view .LVU101
+ 484 0012 7047     		bx	lr
+ 485              	.LVL28:
+ 486              	.L30:
+  96:../../Libraries/fw-shared-modules/Src/log.c ****     return NULL;
+ 487              		.loc 1 96 12 view .LVU102
+ 488 0014 0020     		movs	r0, #0
+ARM GAS  /tmp/ccNQyXBN.s 			page 12
+
+
+ 489              	.LVL29:
+  96:../../Libraries/fw-shared-modules/Src/log.c ****     return NULL;
+ 490              		.loc 1 96 12 view .LVU103
+ 491 0016 7047     		bx	lr
+ 492              	.LVL30:
+ 493              	.L31:
+  96:../../Libraries/fw-shared-modules/Src/log.c ****     return NULL;
+ 494              		.loc 1 96 12 view .LVU104
+ 495 0018 0020     		movs	r0, #0
+ 496              	.LVL31:
+  99:../../Libraries/fw-shared-modules/Src/log.c **** }
+ 497              		.loc 1 99 1 view .LVU105
+ 498 001a 7047     		bx	lr
+ 499              	.L33:
+ 500              		.align	2
+ 501              	.L32:
+ 502 001c 00000000 		.word	modules_pointer
+ 503 0020 00000000 		.word	log_modules
+ 504              		.cfi_endproc
+ 505              	.LFE151:
+ 507              		.section	.text.LOG_GetBackends,"ax",%progbits
+ 508              		.align	1
+ 509              		.global	LOG_GetBackends
+ 510              		.syntax unified
+ 511              		.thumb
+ 512              		.thumb_func
+ 514              	LOG_GetBackends:
+ 515              	.LVL32:
+ 516              	.LFB152:
+ 100:../../Libraries/fw-shared-modules/Src/log.c **** 
+ 101:../../Libraries/fw-shared-modules/Src/log.c **** LOG_Backend* LOG_GetBackends(int *len) {
+ 517              		.loc 1 101 40 is_stmt 1 view -0
+ 518              		.cfi_startproc
+ 519              		@ args = 0, pretend = 0, frame = 0
+ 520              		@ frame_needed = 0, uses_anonymous_args = 0
+ 521              		@ link register save eliminated.
+ 102:../../Libraries/fw-shared-modules/Src/log.c ****   *len = LOG_BACKENDS_AVAIL;
+ 522              		.loc 1 102 3 view .LVU107
+ 523              		.loc 1 102 8 is_stmt 0 view .LVU108
+ 524 0000 0223     		movs	r3, #2
+ 525 0002 0360     		str	r3, [r0]
+ 103:../../Libraries/fw-shared-modules/Src/log.c ****   return &backends[0];
+ 526              		.loc 1 103 3 is_stmt 1 view .LVU109
+ 104:../../Libraries/fw-shared-modules/Src/log.c **** }
+ 527              		.loc 1 104 1 is_stmt 0 view .LVU110
+ 528 0004 0048     		ldr	r0, .L35
+ 529              	.LVL33:
+ 530              		.loc 1 104 1 view .LVU111
+ 531 0006 7047     		bx	lr
+ 532              	.L36:
+ 533              		.align	2
+ 534              	.L35:
+ 535 0008 00000000 		.word	backends
+ 536              		.cfi_endproc
+ 537              	.LFE152:
+ 539              		.section	.text.LOG_GetBackend,"ax",%progbits
+ 540              		.align	1
+ARM GAS  /tmp/ccNQyXBN.s 			page 13
+
+
+ 541              		.global	LOG_GetBackend
+ 542              		.syntax unified
+ 543              		.thumb
+ 544              		.thumb_func
+ 546              	LOG_GetBackend:
+ 547              	.LVL34:
+ 548              	.LFB153:
+ 105:../../Libraries/fw-shared-modules/Src/log.c **** 
+ 106:../../Libraries/fw-shared-modules/Src/log.c **** LOG_Backend* LOG_GetBackend(int index) {
+ 549              		.loc 1 106 40 is_stmt 1 view -0
+ 550              		.cfi_startproc
+ 551              		@ args = 0, pretend = 0, frame = 0
+ 552              		@ frame_needed = 0, uses_anonymous_args = 0
+ 553              		@ link register save eliminated.
+ 107:../../Libraries/fw-shared-modules/Src/log.c ****   if (index < 0 || index >= LOG_BACKENDS_AVAIL) {
+ 554              		.loc 1 107 3 view .LVU113
+ 555              		.loc 1 107 6 is_stmt 0 view .LVU114
+ 556 0000 0128     		cmp	r0, #1
+ 557 0002 05D8     		bhi	.L39
+ 108:../../Libraries/fw-shared-modules/Src/log.c ****     return NULL;
+ 109:../../Libraries/fw-shared-modules/Src/log.c ****   }
+ 110:../../Libraries/fw-shared-modules/Src/log.c ****   return &backends[index];
+ 558              		.loc 1 110 3 is_stmt 1 view .LVU115
+ 559              		.loc 1 110 10 is_stmt 0 view .LVU116
+ 560 0004 00EB4000 		add	r0, r0, r0, lsl #1
+ 561              	.LVL35:
+ 562              		.loc 1 110 10 view .LVU117
+ 563 0008 024B     		ldr	r3, .L40
+ 564 000a 03EB8000 		add	r0, r3, r0, lsl #2
+ 565 000e 7047     		bx	lr
+ 566              	.LVL36:
+ 567              	.L39:
+ 108:../../Libraries/fw-shared-modules/Src/log.c ****     return NULL;
+ 568              		.loc 1 108 12 view .LVU118
+ 569 0010 0020     		movs	r0, #0
+ 570              	.LVL37:
+ 111:../../Libraries/fw-shared-modules/Src/log.c **** }
+ 571              		.loc 1 111 1 view .LVU119
+ 572 0012 7047     		bx	lr
+ 573              	.L41:
+ 574              		.align	2
+ 575              	.L40:
+ 576 0014 00000000 		.word	backends
+ 577              		.cfi_endproc
+ 578              	.LFE153:
+ 580              		.section	.text.LOG_GetBuffer,"ax",%progbits
+ 581              		.align	1
+ 582              		.global	LOG_GetBuffer
+ 583              		.syntax unified
+ 584              		.thumb
+ 585              		.thumb_func
+ 587              	LOG_GetBuffer:
+ 588              	.LFB154:
+ 112:../../Libraries/fw-shared-modules/Src/log.c **** 
+ 113:../../Libraries/fw-shared-modules/Src/log.c **** char (*LOG_GetBuffer())[LOG_MSG_SIZE] {
+ 589              		.loc 1 113 39 is_stmt 1 view -0
+ 590              		.cfi_startproc
+ARM GAS  /tmp/ccNQyXBN.s 			page 14
+
+
+ 591              		@ args = 0, pretend = 0, frame = 0
+ 592              		@ frame_needed = 0, uses_anonymous_args = 0
+ 593              		@ link register save eliminated.
+ 114:../../Libraries/fw-shared-modules/Src/log.c ****   return log_buffer;
+ 594              		.loc 1 114 3 view .LVU121
+ 115:../../Libraries/fw-shared-modules/Src/log.c **** }
+ 595              		.loc 1 115 1 is_stmt 0 view .LVU122
+ 596 0000 0048     		ldr	r0, .L43
+ 597 0002 7047     		bx	lr
+ 598              	.L44:
+ 599              		.align	2
+ 600              	.L43:
+ 601 0004 00000000 		.word	log_buffer
+ 602              		.cfi_endproc
+ 603              	.LFE154:
+ 605              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 606              		.align	2
+ 607              	.LC4:
+ 608 0000 55415254 		.ascii	"UART\000"
+ 608      00
+ 609 0005 000000   		.align	2
+ 610              	.LC5:
+ 611 0008 42756666 		.ascii	"Buffer\000"
+ 611      657200
+ 612              		.section	.data.backends,"aw"
+ 613              		.align	2
+ 616              	backends:
+ 617 0000 00       		.byte	0
+ 618 0001 000000   		.space	3
+ 619 0004 00000000 		.word	.LC4
+ 620 0008 00       		.byte	0
+ 621 0009 000000   		.space	3
+ 622 000c 01       		.byte	1
+ 623 000d 000000   		.space	3
+ 624 0010 08000000 		.word	.LC5
+ 625 0014 00       		.byte	0
+ 626 0015 000000   		.space	3
+ 627              		.section	.bss.cycled_logs,"aw",%nobits
+ 630              	cycled_logs:
+ 631 0000 00       		.space	1
+ 632              		.section	.bss.log_buffer_pointer,"aw",%nobits
+ 633              		.align	2
+ 636              	log_buffer_pointer:
+ 637 0000 00000000 		.space	4
+ 638              		.section	.bss.log_buffer,"aw",%nobits
+ 639              		.align	2
+ 642              	log_buffer:
+ 643 0000 00000000 		.space	500
+ 643      00000000 
+ 643      00000000 
+ 643      00000000 
+ 643      00000000 
+ 644              		.section	.bss.modules_pointer,"aw",%nobits
+ 645              		.align	2
+ 648              	modules_pointer:
+ 649 0000 00000000 		.space	4
+ 650              		.section	.bss.log_modules,"aw",%nobits
+ARM GAS  /tmp/ccNQyXBN.s 			page 15
+
+
+ 651              		.align	2
+ 654              	log_modules:
+ 655 0000 00000000 		.space	40
+ 655      00000000 
+ 655      00000000 
+ 655      00000000 
+ 655      00000000 
+ 656              		.section	.bss.huart,"aw",%nobits
+ 657              		.align	2
+ 660              	huart:
+ 661 0000 00000000 		.space	4
+ 662              		.section	.bss.internal_log_mod,"aw",%nobits
+ 663              		.align	2
+ 666              	internal_log_mod:
+ 667 0000 00000000 		.space	12
+ 667      00000000 
+ 667      00000000 
+ 668              		.section	.rodata.str1.4
+ 669 000f 00       		.align	2
+ 670              	.LC6:
+ 671 0010 55736572 		.ascii	"User Interface\000"
+ 671      20496E74 
+ 671      65726661 
+ 671      636500
+ 672 001f 00       		.align	2
+ 673              	.LC7:
+ 674 0020 554900   		.ascii	"UI\000"
+ 675 0023 00       		.align	2
+ 676              	.LC8:
+ 677 0024 54726163 		.ascii	"Trace\000"
+ 677      6500
+ 678 002a 0000     		.align	2
+ 679              	.LC9:
+ 680 002c 5400     		.ascii	"T\000"
+ 681 002e 0000     		.align	2
+ 682              	.LC10:
+ 683 0030 44656275 		.ascii	"Debug2\000"
+ 683      673200
+ 684 0037 00       		.align	2
+ 685              	.LC11:
+ 686 0038 443200   		.ascii	"D2\000"
+ 687 003b 00       		.align	2
+ 688              	.LC12:
+ 689 003c 44656275 		.ascii	"Debug1\000"
+ 689      673100
+ 690 0043 00       		.align	2
+ 691              	.LC13:
+ 692 0044 443100   		.ascii	"D1\000"
+ 693 0047 00       		.align	2
+ 694              	.LC14:
+ 695 0048 44656275 		.ascii	"Debug\000"
+ 695      6700
+ 696 004e 0000     		.align	2
+ 697              	.LC15:
+ 698 0050 4400     		.ascii	"D\000"
+ 699 0052 0000     		.align	2
+ 700              	.LC16:
+ARM GAS  /tmp/ccNQyXBN.s 			page 16
+
+
+ 701 0054 496E666F 		.ascii	"Info\000"
+ 701      00
+ 702 0059 000000   		.align	2
+ 703              	.LC17:
+ 704 005c 4900     		.ascii	"I\000"
+ 705 005e 0000     		.align	2
+ 706              	.LC18:
+ 707 0060 4E6F7469 		.ascii	"Notice\000"
+ 707      636500
+ 708 0067 00       		.align	2
+ 709              	.LC19:
+ 710 0068 4E00     		.ascii	"N\000"
+ 711 006a 0000     		.align	2
+ 712              	.LC20:
+ 713 006c 5761726E 		.ascii	"Warning\000"
+ 713      696E6700 
+ 714              		.align	2
+ 715              	.LC21:
+ 716 0074 5700     		.ascii	"W\000"
+ 717 0076 0000     		.align	2
+ 718              	.LC22:
+ 719 0078 4572726F 		.ascii	"Error\000"
+ 719      7200
+ 720 007e 0000     		.align	2
+ 721              	.LC23:
+ 722 0080 4500     		.ascii	"E\000"
+ 723 0082 0000     		.align	2
+ 724              	.LC24:
+ 725 0084 43726974 		.ascii	"Critical\000"
+ 725      6963616C 
+ 725      00
+ 726 008d 000000   		.align	2
+ 727              	.LC25:
+ 728 0090 4300     		.ascii	"C\000"
+ 729 0092 0000     		.align	2
+ 730              	.LC26:
+ 731 0094 416C6572 		.ascii	"Alert\000"
+ 731      7400
+ 732 009a 0000     		.align	2
+ 733              	.LC27:
+ 734 009c 4100     		.ascii	"A\000"
+ 735 009e 0000     		.align	2
+ 736              	.LC28:
+ 737 00a0 456D6572 		.ascii	"Emergency\000"
+ 737      67656E63 
+ 737      7900
+ 738 00aa 0000     		.align	2
+ 739              	.LC29:
+ 740 00ac 452100   		.ascii	"E!\000"
+ 741              		.section	.rodata.LOG_LEVEL,"a"
+ 742              		.align	2
+ 745              	LOG_LEVEL:
+ 746 0000 00       		.byte	0
+ 747 0001 000000   		.space	3
+ 748 0004 10000000 		.word	.LC6
+ 749 0008 20000000 		.word	.LC7
+ 750 000c 01       		.byte	1
+ARM GAS  /tmp/ccNQyXBN.s 			page 17
+
+
+ 751 000d 000000   		.space	3
+ 752 0010 24000000 		.word	.LC8
+ 753 0014 2C000000 		.word	.LC9
+ 754 0018 02       		.byte	2
+ 755 0019 000000   		.space	3
+ 756 001c 30000000 		.word	.LC10
+ 757 0020 38000000 		.word	.LC11
+ 758 0024 03       		.byte	3
+ 759 0025 000000   		.space	3
+ 760 0028 3C000000 		.word	.LC12
+ 761 002c 44000000 		.word	.LC13
+ 762 0030 04       		.byte	4
+ 763 0031 000000   		.space	3
+ 764 0034 48000000 		.word	.LC14
+ 765 0038 50000000 		.word	.LC15
+ 766 003c 05       		.byte	5
+ 767 003d 000000   		.space	3
+ 768 0040 54000000 		.word	.LC16
+ 769 0044 5C000000 		.word	.LC17
+ 770 0048 06       		.byte	6
+ 771 0049 000000   		.space	3
+ 772 004c 60000000 		.word	.LC18
+ 773 0050 68000000 		.word	.LC19
+ 774 0054 07       		.byte	7
+ 775 0055 000000   		.space	3
+ 776 0058 6C000000 		.word	.LC20
+ 777 005c 74000000 		.word	.LC21
+ 778 0060 08       		.byte	8
+ 779 0061 000000   		.space	3
+ 780 0064 78000000 		.word	.LC22
+ 781 0068 80000000 		.word	.LC23
+ 782 006c 09       		.byte	9
+ 783 006d 000000   		.space	3
+ 784 0070 84000000 		.word	.LC24
+ 785 0074 90000000 		.word	.LC25
+ 786 0078 0A       		.byte	10
+ 787 0079 000000   		.space	3
+ 788 007c 94000000 		.word	.LC26
+ 789 0080 9C000000 		.word	.LC27
+ 790 0084 0B       		.byte	11
+ 791 0085 000000   		.space	3
+ 792 0088 A0000000 		.word	.LC28
+ 793 008c AC000000 		.word	.LC29
+ 794              		.text
+ 795              	.Letext0:
+ 796              		.file 2 "/usr/arm-none-eabi/include/machine/_default_types.h"
+ 797              		.file 3 "/usr/arm-none-eabi/include/sys/_stdint.h"
+ 798              		.file 4 "../../Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h755xx.h"
+ 799              		.file 5 "/usr/lib/gcc/arm-none-eabi/14.1.0/include/stddef.h"
+ 800              		.file 6 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_def.h"
+ 801              		.file 7 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dma.h"
+ 802              		.file 8 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart.h"
+ 803              		.file 9 "../../Libraries/fw-shared-modules/Inc/log.h"
+ 804              		.file 10 "/usr/lib/gcc/arm-none-eabi/14.1.0/include/stdarg.h"
+ 805              		.file 11 "/usr/arm-none-eabi/include/stdio.h"
+ 806              		.file 12 "/usr/arm-none-eabi/include/string.h"
+ 807              		.file 13 "<built-in>"
+ARM GAS  /tmp/ccNQyXBN.s 			page 18
+
+
+ARM GAS  /tmp/ccNQyXBN.s 			page 19
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 log.c
+     /tmp/ccNQyXBN.s:20     .rodata.LOG_Printf.str1.4:00000000 $d
+     /tmp/ccNQyXBN.s:24     .text.LOG_Printf:00000000 $t
+     /tmp/ccNQyXBN.s:30     .text.LOG_Printf:00000000 LOG_Printf
+     /tmp/ccNQyXBN.s:259    .text.LOG_Printf:000000f4 $d
+     /tmp/ccNQyXBN.s:745    .rodata.LOG_LEVEL:00000000 LOG_LEVEL
+     /tmp/ccNQyXBN.s:616    .data.backends:00000000 backends
+     /tmp/ccNQyXBN.s:630    .bss.cycled_logs:00000000 cycled_logs
+     /tmp/ccNQyXBN.s:636    .bss.log_buffer_pointer:00000000 log_buffer_pointer
+     /tmp/ccNQyXBN.s:642    .bss.log_buffer:00000000 log_buffer
+     /tmp/ccNQyXBN.s:660    .bss.huart:00000000 huart
+     /tmp/ccNQyXBN.s:272    .rodata.LOG_InitModule.str1.4:00000000 $d
+     /tmp/ccNQyXBN.s:276    .text.LOG_InitModule:00000000 $t
+     /tmp/ccNQyXBN.s:282    .text.LOG_InitModule:00000000 LOG_InitModule
+     /tmp/ccNQyXBN.s:337    .text.LOG_InitModule:00000028 $d
+     /tmp/ccNQyXBN.s:666    .bss.internal_log_mod:00000000 internal_log_mod
+     /tmp/ccNQyXBN.s:648    .bss.modules_pointer:00000000 modules_pointer
+     /tmp/ccNQyXBN.s:654    .bss.log_modules:00000000 log_modules
+     /tmp/ccNQyXBN.s:345    .rodata.LOG_Init.str1.4:00000000 $d
+     /tmp/ccNQyXBN.s:352    .text.LOG_Init:00000000 $t
+     /tmp/ccNQyXBN.s:358    .text.LOG_Init:00000000 LOG_Init
+     /tmp/ccNQyXBN.s:410    .text.LOG_Init:00000034 $d
+     /tmp/ccNQyXBN.s:419    .text.LOG_GetModules:00000000 $t
+     /tmp/ccNQyXBN.s:425    .text.LOG_GetModules:00000000 LOG_GetModules
+     /tmp/ccNQyXBN.s:447    .text.LOG_GetModules:0000000c $d
+     /tmp/ccNQyXBN.s:453    .text.LOG_GetModule:00000000 $t
+     /tmp/ccNQyXBN.s:459    .text.LOG_GetModule:00000000 LOG_GetModule
+     /tmp/ccNQyXBN.s:502    .text.LOG_GetModule:0000001c $d
+     /tmp/ccNQyXBN.s:508    .text.LOG_GetBackends:00000000 $t
+     /tmp/ccNQyXBN.s:514    .text.LOG_GetBackends:00000000 LOG_GetBackends
+     /tmp/ccNQyXBN.s:535    .text.LOG_GetBackends:00000008 $d
+     /tmp/ccNQyXBN.s:540    .text.LOG_GetBackend:00000000 $t
+     /tmp/ccNQyXBN.s:546    .text.LOG_GetBackend:00000000 LOG_GetBackend
+     /tmp/ccNQyXBN.s:576    .text.LOG_GetBackend:00000014 $d
+     /tmp/ccNQyXBN.s:581    .text.LOG_GetBuffer:00000000 $t
+     /tmp/ccNQyXBN.s:587    .text.LOG_GetBuffer:00000000 LOG_GetBuffer
+     /tmp/ccNQyXBN.s:601    .text.LOG_GetBuffer:00000004 $d
+     /tmp/ccNQyXBN.s:606    .rodata.str1.4:00000000 $d
+     /tmp/ccNQyXBN.s:613    .data.backends:00000000 $d
+     /tmp/ccNQyXBN.s:631    .bss.cycled_logs:00000000 $d
+     /tmp/ccNQyXBN.s:633    .bss.log_buffer_pointer:00000000 $d
+     /tmp/ccNQyXBN.s:639    .bss.log_buffer:00000000 $d
+     /tmp/ccNQyXBN.s:645    .bss.modules_pointer:00000000 $d
+     /tmp/ccNQyXBN.s:651    .bss.log_modules:00000000 $d
+     /tmp/ccNQyXBN.s:657    .bss.huart:00000000 $d
+     /tmp/ccNQyXBN.s:663    .bss.internal_log_mod:00000000 $d
+     /tmp/ccNQyXBN.s:742    .rodata.LOG_LEVEL:00000000 $d
+
+UNDEFINED SYMBOLS
+snprintf
+vsnprintf
+strlen
+strncpy
+HAL_UART_Transmit
+memset

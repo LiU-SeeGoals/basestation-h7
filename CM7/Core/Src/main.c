@@ -22,7 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <log.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,7 +49,7 @@
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
-
+static LOG_Module internal_log_mod;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -62,18 +62,7 @@ static void MX_USART3_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
-PUTCHAR_PROTOTYPE
-{
-  HAL_UART_Transmit(&huart3, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
-  return ch;
-}
 
-int _write(int fd, char *ch, int len)
-{
-  HAL_UART_Transmit(&huart3, (uint8_t *)ch, len, HAL_MAX_DELAY);
-  return len;
-}
 /* USER CODE END 0 */
 
 /**
@@ -103,7 +92,7 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
-/* USER CODE BEGIN Boot_Mode_Sequence_2 */
+  /* USER CODE BEGIN Boot_Mode_Sequence_2 */
   __HAL_RCC_HSEM_CLK_ENABLE();
   HAL_HSEM_FastTake(HSEM_ID_0);
   HAL_HSEM_Release(HSEM_ID_0,0);
@@ -115,7 +104,7 @@ int main(void)
   {
     Error_Handler();
   }
-/* USER CODE END Boot_Mode_Sequence_2 */
+  /* USER CODE END Boot_Mode_Sequence_2 */
 
   /* USER CODE BEGIN SysInit */
 
@@ -126,7 +115,10 @@ int main(void)
   MX_USART3_UART_Init();
   MX_LWIP_Init();
   /* USER CODE BEGIN 2 */
-  printf("\r\n\r\nbasestation\r\n");
+  LOG_Init(&huart3);
+  LOG_InitModule(&internal_log_mod, "MAIN", LOG_LEVEL_INFO);
+  LOG_INFO("Startup finished...\r\n");
+
   HAL_GPIO_TogglePin(LED_YELLOW_GPIO_Port, LED_YELLOW_Pin);
   /* USER CODE END 2 */
 

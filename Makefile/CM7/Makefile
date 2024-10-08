@@ -38,6 +38,7 @@ BUILD_DIR = build
 C_SOURCES =  \
 ../../CM7/LWIP/App/lwip.c \
 ../../CM7/LWIP/Target/ethernetif.c \
+../../Libraries/fw-shared-modules/Src/log.c \
 ../../CM7/Core/Src/main.c \
 ../../CM7/Core/Src/stm32h7xx_it.c \
 ../../CM7/Core/Src/stm32h7xx_hal_msp.c \
@@ -207,6 +208,7 @@ AS_INCLUDES =
 
 # C includes
 C_INCLUDES =  \
+-I../../Libraries/fw-shared-modules/Inc \
 -I../../CM7/LWIP/App \
 -I../../CM7/LWIP/Target \
 -I../../CM7/Core/Inc \

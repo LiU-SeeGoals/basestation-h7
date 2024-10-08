@@ -67,7 +67,8 @@ build/main.o: ../../CM7/Core/Src/main.c ../../CM7/Core/Inc/main.h \
  ../../Middlewares/Third_Party/LwIP/src/include/lwip/prot/ip.h \
  ../../Middlewares/Third_Party/LwIP/src/include/lwip/prot/udp.h \
  ../../Middlewares/Third_Party/LwIP/src/include/lwip/timeouts.h \
- ../../CM7/LWIP/Target/ethernetif.h
+ ../../CM7/LWIP/Target/ethernetif.h \
+ ../../Libraries/fw-shared-modules/Inc/log.h
 ../../CM7/Core/Inc/main.h:
 ../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h:
 ../../CM7/Core/Inc/stm32h7xx_hal_conf.h:
@@ -138,3 +139,4 @@ build/main.o: ../../CM7/Core/Src/main.c ../../CM7/Core/Inc/main.h \
 ../../Middlewares/Third_Party/LwIP/src/include/lwip/prot/udp.h:
 ../../Middlewares/Third_Party/LwIP/src/include/lwip/timeouts.h:
 ../../CM7/LWIP/Target/ethernetif.h:
+../../Libraries/fw-shared-modules/Inc/log.h:
